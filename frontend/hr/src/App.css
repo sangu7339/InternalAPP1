@@ -1,0 +1,43 @@
+/* App.css additions for responsiveness */
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f7fafc;
+}
+
+/* Responsive container */
+.main-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Mobile font and padding adjustments */
+@media (max-width: 600px) {
+  .main-container {
+    padding: 0.5rem;
+  }
+
+  h1, h2, h3 {
+    font-size: 1.2rem;
+  }
+
+  .dashboard-panel {
+    flex-direction: column;
+  }
+
+  .form-group input,
+  .form-group button {
+    width: 100%;
+    font-size: 1rem;
+  }
+}
+
+/* Responsive dashboard panels */
+.dashboard-panel {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
