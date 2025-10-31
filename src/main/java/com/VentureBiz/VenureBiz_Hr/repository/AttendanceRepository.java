@@ -36,4 +36,16 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
                                       @Param("status") String status,
                                       @Param("year") int year,
                                       @Param("month") int month);
-}
+
+    // ✅ NEW: Get all attendance records for a specific date (used in scheduler)
+    List<Attendance> findByDate(LocalDate date);
+    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN TRUE ELSE FALSE END " +
+            "FROM Attendance a " +
+            "WHERE a.user = :user AND a.date = :date AND a.status = :status")
+     boolean existsByUserAndDateAndStatus(@Param("user") User user,
+                                          @Param("date") LocalDate date,
+                                          @Param("status") String status);
+    
+    
+ }
+

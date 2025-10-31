@@ -24,7 +24,7 @@ public class LeaveRequest {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private LeaveType leaveType; // enum: SICK, CASUAL
+    private LeaveType leaveType; // SICK, CASUAL
 
     @Column(nullable = false)
     private LocalDate startDate;
@@ -45,7 +45,6 @@ public class LeaveRequest {
     @Column(length = 500)
     private String reason;
 
-    // ✅ New fields for HR approval
     @Column(name = "approved_by_hr")
     private String approvedByHr;
 
@@ -53,14 +52,11 @@ public class LeaveRequest {
     private LocalDate approvedOn;
 
     public enum LeaveType {
-        SICK,
-        CASUAL
+        SICK, CASUAL
     }
 
     public enum LeaveStatus {
-        PENDING,
-        APPROVED,
-        REJECTED
+        PENDING, APPROVED, REJECTED
     }
 
     @PrePersist
@@ -74,4 +70,3 @@ public class LeaveRequest {
         }
     }
 }
-

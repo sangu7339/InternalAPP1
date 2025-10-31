@@ -1,100 +1,102 @@
 package com.VentureBiz.VenureBiz_Hr.exception;
 
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
-/**
- * ✅ Global Exception Handler for all controllers.
- * Compatible with Spring Boot 3+ / Spring Framework 6+.
- */
 @RestControllerAdvice
-public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+public class GlobalExceptionHandler {
 
-    // --- Handle custom RuntimeExceptions ---
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Object> handleRuntimeException(RuntimeException ex, WebRequest request) {
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                ex.getMessage(),
+                request.getDescription(false)
+        );
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
-    // --- Handle entity not found or missing data ---
-    @ExceptionHandler(NoSuchElementException.class)
-    public ResponseEntity<Object> handleNoSuchElementException(NoSuchElementException ex, WebRequest request) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex, WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                request.getDescription(false)
+        );
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    // --- Handle invalid authentication ---
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Object> handleBadCredentials(BadCredentialsException ex, WebRequest request) {
-        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Invalid email or password", request);
-    }
-
-    // --- Handle forbidden access ---
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Object> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
-        return buildErrorResponse(HttpStatus.FORBIDDEN, "Access denied", request);
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),
+                "Access Denied",
+                "You are not authorized to perform this action.",
+                request.getDescription(false)
+        );
+        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
     }
 
-    // --- Handle invalid argument type ---
-    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<Object> handleTypeMismatch(MethodArgumentTypeMismatchException ex, WebRequest request) {
-        String message = String.format("Invalid value '%s' for parameter '%s'. Expected type: %s",
-                ex.getValue(), ex.getName(),
-                ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown");
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationErrors(MethodArgumentNotValidException ex) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Validation Failed");
+
+        Map<String, String> errors = new HashMap<>();
+        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
+            errors.put(fieldError.getField(), fieldError.getDefaultMessage());
+        }
+        response.put("details", errors);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    // --- Handle all other exceptions ---
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleAllExceptions(Exception ex, WebRequest request) {
-        ex.printStackTrace(); // Optional: for debugging
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred: " + ex.getMessage(), request);
+    public ResponseEntity<ErrorResponse> handleAll(Exception ex, WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Server Error",
+                ex.getMessage(),
+                request.getDescription(false)
+        );
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    // ✅ Fixed method signature for Spring Boot 3+
-    @Override
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException ex, HttpHeaders headers,
-            HttpStatusCode status, WebRequest request) {
+    public static class ErrorResponse {
+        private LocalDateTime timestamp;
+        private int status;
+        private String error;
+        private String message;
+        private String path;
 
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", status.value());
-        body.put("error", "Validation failed");
+        public ErrorResponse(LocalDateTime timestamp, int status, String error, String message, String path) {
+            this.timestamp = timestamp;
+            this.status = status;
+            this.error = error;
+            this.message = message;
+            this.path = path;
+        }
 
-        List<String> errors = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(err -> err.getField() + ": " + err.getDefaultMessage())
-                .collect(Collectors.toList());
-
-        body.put("details", errors);
-        body.put("path", request.getDescription(false).replace("uri=", ""));
-
-        return new ResponseEntity<>(body, headers, HttpStatus.valueOf(status.value()));
+        public LocalDateTime getTimestamp() { return timestamp; }
+        public int getStatus() { return status; }
+        public String getError() { return error; }
+        public String getMessage() { return message; }
+        public String getPath() { return path; }
     }
-
-    // --- Utility method for consistent responses ---
-    private ResponseEntity<Object> buildErrorResponse(HttpStatus status, String message, WebRequest request) {
-        Map<String, Object> errorBody = new LinkedHashMap<>();
-        errorBody.put("timestamp", LocalDateTime.now());
-        errorBody.put("status", status.value());
-        errorBody.put("error", status.getReasonPhrase());
-        errorBody.put("message", message);
-        errorBody.put("path", request.getDescription(false).replace("uri=", ""));
-        return new ResponseEntity<>(errorBody, status);
-    }
+    
 }

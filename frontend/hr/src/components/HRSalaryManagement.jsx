@@ -207,7 +207,7 @@ const HRSalaryManagement = () => {
 
           <div style={styles.formRow}>
             <div style={styles.formGroup}><label style={styles.label}>Basic</label><input type="text" value={basic} onChange={e => handleNumberInput(e.target.value, setBasic)} style={styles.input}/></div>
-            <div style={styles.formGroup}><label style={styles.label}>Flexible Benefit Plan</label><input type="text" value={flexibleBenefitPlan} onChange={e => handleNumberInput(e.target.value, setFlexibleBenefitPlan)} style={styles.input}/></div>
+            <div style={styles.formGroup}><label style={styles.label}>HRA</label><input type="text" value={flexibleBenefitPlan} onChange={e => handleNumberInput(e.target.value, setFlexibleBenefitPlan)} style={styles.input}/></div>
             <div style={styles.formGroup}><label style={styles.label}>Special Allowance</label><input type="text" value={specialAllowance} onChange={e => handleNumberInput(e.target.value, setSpecialAllowance)} style={styles.input}/></div>
             <div style={styles.formGroup}><label style={styles.label}>PF Contribution</label><input type="text" value={pfContributionEmployer} onChange={e => handleNumberInput(e.target.value, setPfContributionEmployer)} style={styles.input}/></div>
             <div style={styles.formGroup}><label style={styles.label}>Professional Tax</label><input type="text" value={professionalTax} onChange={e => handleNumberInput(e.target.value, setProfessionalTax)} style={styles.input}/></div>

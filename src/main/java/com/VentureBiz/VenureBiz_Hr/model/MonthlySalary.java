@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.YearMonth;
 
+import com.VentureBiz.VenureBiz_Hr.config.YearMonthAttributeConverter;
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -19,7 +21,7 @@ public class MonthlySalary {
     @ManyToOne
     @JoinColumn(name = "employee_id")
     private Employee employee;
-
+    @Convert(converter = YearMonthAttributeConverter.class)
     private YearMonth month; // e.g., 2025-10
 
     private double basic;

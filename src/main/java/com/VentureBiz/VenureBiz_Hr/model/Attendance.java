@@ -25,7 +25,7 @@ public class Attendance {
     private LocalTime checkInTime;
     private LocalTime checkOutTime;
 
-    private String status;   // PRESENT / HALF_DAY / LATE_ABSENT / ABSENT
+    private String status;   // PRESENT / HALF_DAY  / ABSENT
     private String reason;   // Optional HR note
 }
 
