@@ -78,4 +78,6 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
                                  @Param("year") int year,
                                  @Param("month") int month);
     
+    
+    
 }

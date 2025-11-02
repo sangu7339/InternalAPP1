@@ -1014,7 +1014,7 @@ function HRDashboard() {
               ref={notificationRef}
               style={{ position: 'relative' }}
             >
-              <div
+              {/* <div
                 className={`notification-bell ${pendingUsers.length > 0 ? "red" : ""}`}
                 onClick={() => setShowNotifications(!showNotifications)}
               >
@@ -1022,7 +1022,7 @@ function HRDashboard() {
                 {pendingUsers.length > 0 && (
                   <span className="notification-count">{pendingUsers.length}</span>
                 )}
-              </div>
+              </div> */}
 
               {showNotifications && (
                 <div className="notification-dropdown">

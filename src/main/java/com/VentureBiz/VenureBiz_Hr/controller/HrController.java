@@ -139,6 +139,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @CrossOrigin(origins = "http://localhost:5173") // match frontend
 @RestController
@@ -165,33 +166,33 @@ public class HrController {
     }
 
     // ✅ Add new employee
-    @PostMapping("/employees")
-    @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<?> addEmployee(@RequestBody Employee employee) {
-        try {
-            User user = resolveUser(employee.getUser());
-
-            if (employeeRepository.findByUser_Email(user.getEmail()).isPresent()) {
-                return ResponseEntity.status(409)
-                        .body("⚠️ Employee already exists for user: " + user.getEmail());
-            }
-
-            employee.setUser(user);
-
-            if (employee.getDateOfJoining() == null) {
-                employee.setDateOfJoining(LocalDate.now());
-            }
-
-            Employee saved = employeeRepository.save(employee);
-            return ResponseEntity.ok(saved);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest()
-                    .body("⚠️ " + e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("❌ Failed to add employee: " + e.getMessage());
-        }
-    }
+//    @PostMapping("/employees")
+//    @PreAuthorize("hasRole('HR')")
+//    public ResponseEntity<?> addEmployee(@RequestBody Employee employee) {
+//        try {
+//            User user = resolveUser(employee.getUser());
+//
+//            if (employeeRepository.findByUser_Email(user.getEmail()).isPresent()) {
+//                return ResponseEntity.status(409)
+//                        .body("⚠️ Employee already exists for user: " + user.getEmail());
+//            }
+//
+//            employee.setUser(user);
+//
+//            if (employee.getDateOfJoining() == null) {
+//                employee.setDateOfJoining(LocalDate.now());
+//            }
+//
+//            Employee saved = employeeRepository.save(employee);
+//            return ResponseEntity.ok(saved);
+//        } catch (RuntimeException e) {
+//            return ResponseEntity.badRequest()
+//                    .body("⚠️ " + e.getMessage());
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body("❌ Failed to add employee: " + e.getMessage());
+//        }
+//    }
 
     // ✅ Update employee
     @PutMapping("/employees/{id}")
@@ -235,6 +236,130 @@ public class HrController {
                     .body("❌ Failed to update employee: " + e.getMessage());
         }
     }
+//    @PostMapping("/employees")
+//    @PreAuthorize("hasRole('HR')")
+//    public ResponseEntity<?> addEmployee(@RequestBody Employee employee) {
+//        try {
+//            User userInput = employee.getUser();
+//
+//            if (userInput == null || userInput.getEmail() == null || userInput.getEmail().isBlank()) {
+//                return ResponseEntity.badRequest().body("⚠️ Employee must have an email for user account creation.");
+//            }
+//
+//            // 🔹 Check if user already exists
+//            User user = userRepository.findByEmail(userInput.getEmail()).orElse(null);
+//
+//            if (user == null) {
+//                // 🔹 Create new user if not found
+//                user = new User();
+//                user.setEmail(userInput.getEmail());
+//                user.setRole(com.VentureBiz.VenureBiz_Hr.model.Role.EMPLOYEE);
+//
+//                // 🔹 Build default password = name + email (if not provided)
+//                String rawPassword;
+//                if (userInput.getPassword() != null && !userInput.getPassword().isBlank()) {
+//                    rawPassword = userInput.getPassword();
+//                } else {
+//                    String namePart = (employee.getName() != null) ? employee.getName().replaceAll("\\s+", "") : "User";
+//                    rawPassword = namePart + userInput.getEmail();
+//                }
+//
+//                user.setPassword(passwordEncoder.encode(rawPassword));
+//                userRepository.save(user);
+//            } else if (employeeRepository.findByUser_Email(user.getEmail()).isPresent()) {
+//                return ResponseEntity.status(409)
+//                        .body("⚠️ Employee already exists for user: " + user.getEmail());
+//            }
+//
+//            // 🔹 Link user to employee
+//            employee.setUser(user);
+//
+//            // Default date of joining
+//            if (employee.getDateOfJoining() == null) {
+//                employee.setDateOfJoining(LocalDate.now());
+//            }
+//
+//            // Default status
+//            if (employee.getStatus() == null) {
+//                employee.setStatus(com.VentureBiz.VenureBiz_Hr.model.Status.ACTIVE);
+//            }
+//
+//            Employee saved = employeeRepository.save(employee);
+//
+//            return ResponseEntity.ok(Map.of(
+//                    "message", "✅ Employee and user account created successfully.",
+//                    "employeeId", saved.getEmployeeId(),
+//                    "userEmail", user.getEmail()
+//            ));
+//
+//        } catch (RuntimeException e) {
+//            return ResponseEntity.badRequest().body("⚠️ " + e.getMessage());
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body("❌ Failed to add employee: " + e.getMessage());
+//        }
+//    }
+    @PostMapping("/employees")
+    @PreAuthorize("hasRole('HR')")
+    public ResponseEntity<?> addEmployee(@RequestBody Employee employee) {
+        try {
+            User userInput = employee.getUser();
+
+            if (userInput == null || userInput.getEmail() == null || userInput.getEmail().isBlank()) {
+                return ResponseEntity.badRequest().body("⚠️ Employee must have an email for user account creation.");
+            }
+
+            // 🔹 Check if user already exists
+            User user = userRepository.findByEmail(userInput.getEmail()).orElse(null);
+
+            if (user == null) {
+                // 🔹 Create new user if not found
+                user = new User();
+                user.setEmail(userInput.getEmail());
+                user.setRole(com.VentureBiz.VenureBiz_Hr.model.Role.EMPLOYEE);
+
+                // ✅ Default password is the employee's email
+                String password = userInput.getPassword();
+                if (password == null || password.isBlank()) {
+                    password = userInput.getEmail();
+                }
+
+                user.setPassword(passwordEncoder.encode(password));
+                userRepository.save(user);
+            } else if (employeeRepository.findByUser_Email(user.getEmail()).isPresent()) {
+                return ResponseEntity.status(409)
+                        .body("⚠️ Employee already exists for user: " + user.getEmail());
+            }
+
+            // 🔹 Link user to employee
+            employee.setUser(user);
+
+            // Default date of joining
+            if (employee.getDateOfJoining() == null) {
+                employee.setDateOfJoining(LocalDate.now());
+            }
+
+            // Default status
+            if (employee.getStatus() == null) {
+                employee.setStatus(com.VentureBiz.VenureBiz_Hr.model.Status.ACTIVE);
+            }
+
+            Employee saved = employeeRepository.save(employee);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "✅ Employee and user account created successfully.",
+                    "employeeId", saved.getEmployeeId(),
+                    "userEmail", user.getEmail()
+            ));
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body("⚠️ " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("❌ Failed to add employee: " + e.getMessage());
+        }
+    }
+
 
     // ✅ Delete employee
     @DeleteMapping("/employees/{id}")

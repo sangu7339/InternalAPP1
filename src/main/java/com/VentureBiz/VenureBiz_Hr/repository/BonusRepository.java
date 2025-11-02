@@ -1,9 +1,11 @@
 package com.VentureBiz.VenureBiz_Hr.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-import com.VentureBiz.VenureBiz_Hr.model.Bonus;
+import java.util.List;
 
-@Repository
-public interface BonusRepository extends JpaRepository<Bonus, Integer> {
+import org.springframework.data.jpa.repository.JpaRepository;
+import com.VentureBiz.VenureBiz_Hr.model.Bonus;
+import com.VentureBiz.VenureBiz_Hr.model.Employee;
+
+public interface BonusRepository extends JpaRepository<Bonus, Long> {
+    List<Bonus> findByEmployee(Employee employee);
 }

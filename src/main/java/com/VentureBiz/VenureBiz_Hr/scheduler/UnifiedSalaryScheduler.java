@@ -287,6 +287,169 @@
 //        );
 //    }
 //}
+////
+//package com.VentureBiz.VenureBiz_Hr.scheduler;
+//
+//import com.VentureBiz.VenureBiz_Hr.model.Employee;
+//import com.VentureBiz.VenureBiz_Hr.model.MonthlySalary;
+//import com.VentureBiz.VenureBiz_Hr.model.SalaryPackage;
+//import com.VentureBiz.VenureBiz_Hr.repository.*;
+//import lombok.RequiredArgsConstructor;
+//import lombok.extern.slf4j.Slf4j;
+//import org.springframework.scheduling.annotation.Scheduled;
+//import org.springframework.stereotype.Component;
+//
+//import java.time.DayOfWeek;
+//import java.time.LocalDate;
+//import java.time.YearMonth;
+//import java.util.List;
+//
+//@Slf4j
+//@Component
+//@RequiredArgsConstructor
+//public class UnifiedSalaryScheduler {
+//
+//    private final MonthlySalaryRepository monthlySalaryRepository;
+//    private final SalaryPackageRepository salaryPackageRepository;
+//    private final EmployeeRepository employeeRepository;
+//    private final AttendanceRepository attendanceRepository;
+//    private final LeaveRepository leaveRepository;
+//    private final HolidayRepository holidayRepository;
+//
+//    /**
+//     * 💰 Scheduler runs daily at 12:10 AM
+//     * - Marks previous month as PAID
+//     * - Calculates current month salaries
+//     * - Weekends + Holidays are always paid
+//     * - Only APPROVED sick leaves are counted as paid
+//     */
+//    @Scheduled(cron = "0 10 0 * * *")
+//    public void processSalaries() {
+//        LocalDate today = LocalDate.now();
+//        YearMonth currentMonth = YearMonth.from(today);
+//        YearMonth previousMonth = currentMonth.minusMonths(1);
+//
+//        log.info("💼 Salary processing started for {}", currentMonth);
+//
+//        // 1️⃣ Mark previous month salaries as PAID
+//        monthlySalaryRepository.findByMonth(previousMonth).forEach(ms -> {
+//            if (ms.getStatus() != MonthlySalary.Status.PAID) {
+//                ms.setStatus(MonthlySalary.Status.PAID);
+//                monthlySalaryRepository.save(ms);
+//                log.info("✅ Marked salary as PAID for {} ({})",
+//                        ms.getEmployee().getName(), previousMonth);
+//            }
+//        });
+//
+//        // 2️⃣ Process current month salaries
+//        List<Employee> employees = employeeRepository.findAll();
+//        int totalDaysInMonth = currentMonth.lengthOfMonth(); // includes weekends & holidays
+//
+//        for (Employee emp : employees) {
+//
+//            MonthlySalary ms = monthlySalaryRepository
+//                    .findByEmployeeAndMonth(emp, currentMonth)
+//                    .orElseGet(() -> createNewMonthlySalary(emp, currentMonth, totalDaysInMonth));
+//
+//            // ✅ Count present days
+//            long presentDays = attendanceRepository.countByUserAndStatusAndMonth(
+//                    emp.getUser(), "PRESENT", currentMonth.getYear(), currentMonth.getMonthValue());
+//
+//            // ✅ Count only approved SICK leaves
+//            long sickLeaves = leaveRepository.countApprovedSickLeaves(
+//                    emp.getUser(), currentMonth.getYear(), currentMonth.getMonthValue());
+//
+//            // ✅ Count holidays (always paid)
+//            int holidays = getHolidayCountInMonth(currentMonth);
+//
+//            // ✅ Count weekends (always paid)
+//            int weekendDays = getWeekendCountInMonth(currentMonth);
+//
+//            // ✅ Get salary package
+//            SalaryPackage sp = salaryPackageRepository.findByEmployee(emp)
+//                    .orElseThrow(() -> new RuntimeException(
+//                            "Salary package not found for " + emp.getName()));
+//
+//            // ✅ Handle LOP (Loss of Pay)
+//            long lopDays = sp.getLop() != 0 ? Math.round(sp.getLop()) : 0;
+//
+//            // ✅ Calculate payable days
+//            long payableDays = Math.max(0, presentDays + sickLeaves + holidays + weekendDays - lopDays);
+//            if (payableDays > totalDaysInMonth) payableDays = totalDaysInMonth; // prevent overflow
+//
+//            double factor = (double) payableDays / totalDaysInMonth;
+//
+//            // 💵 Calculate monthly salary (pro-rated)
+//            double basic = sp.getBasic() / 12 * factor;
+//            double flexible = sp.getFlexibleBenefitPlan() / 12 * factor;
+//            double special = sp.getSpecialAllowance() / 12 * factor;
+//            double pf = sp.getPfContributionEmployer() / 12 * factor;
+//            double tax = sp.getProfessionalTax() / 12 * factor;
+//            double gross = basic + flexible + special + pf;
+//            double net = gross - tax;
+//
+//            // 💾 Update salary record
+//            ms.setBasic(basic);
+//            ms.setFlexibleBenefitPlan(flexible);
+//            ms.setSpecialAllowance(special);
+//            ms.setPfContributionEmployer(pf);
+//            ms.setProfessionalTax(tax);
+//            ms.setGrossSalary(gross);
+//            ms.setNetSalary(net);
+//            ms.setWorkedDays((int) payableDays);
+//            ms.setTotalWorkingDays(totalDaysInMonth);
+//            ms.setStatus(MonthlySalary.Status.RUNNING);
+//
+//            monthlySalaryRepository.save(ms);
+//        }
+//
+//        log.info("✅ Salary recalculation completed for {}", currentMonth);
+//    }
+//
+//    /** 🗓️ Count number of weekends (Saturday + Sunday) in the month */
+//    private int getWeekendCountInMonth(YearMonth ym) {
+//        int count = 0;
+//        for (int day = 1; day <= ym.lengthOfMonth(); day++) {
+//            DayOfWeek dow = ym.atDay(day).getDayOfWeek();
+//            if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+//                count++;
+//            }
+//        }
+//        return count;
+//    }
+//
+//    /** 🗓️ Count number of holidays in the month */
+//    private int getHolidayCountInMonth(YearMonth ym) {
+//        int count = 0;
+//        for (int d = 1; d <= ym.lengthOfMonth(); d++) {
+//            LocalDate date = ym.atDay(d);
+//            if (holidayRepository.existsByDate(date)) {
+//                count++;
+//            }
+//        }
+//        return count;
+//    }
+//
+//    /** 🆕 Create new MonthlySalary record if missing */
+//    private MonthlySalary createNewMonthlySalary(Employee emp, YearMonth ym, int totalDays) {
+//        return monthlySalaryRepository.save(
+//                MonthlySalary.builder()
+//                        .employee(emp)
+//                        .month(ym)
+//                        .basic(0)
+//                        .flexibleBenefitPlan(0)
+//                        .specialAllowance(0)
+//                        .pfContributionEmployer(0)
+//                        .professionalTax(0)
+//                        .grossSalary(0)
+//                        .netSalary(0)
+//                        .totalWorkingDays(totalDays)
+//                        .workedDays(0)
+//                        .status(MonthlySalary.Status.RUNNING)
+//                        .build()
+//        );
+//    }
+//}
 //
 package com.VentureBiz.VenureBiz_Hr.scheduler;
 
@@ -302,7 +465,9 @@ import org.springframework.stereotype.Component;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Component
@@ -318,10 +483,11 @@ public class UnifiedSalaryScheduler {
 
     /**
      * 💰 Scheduler runs daily at 12:10 AM
-     * - Marks previous month as PAID
+     * - Marks previous month as PENDING
      * - Calculates current month salaries
-     * - Weekends + Holidays are always paid
+     * - Weekends + Holidays (unique) are always paid
      * - Only APPROVED sick leaves are counted as paid
+     * - HR manually marks PENDING → PAID
      */
     @Scheduled(cron = "0 10 0 * * *")
     public void processSalaries() {
@@ -331,19 +497,19 @@ public class UnifiedSalaryScheduler {
 
         log.info("💼 Salary processing started for {}", currentMonth);
 
-        // 1️⃣ Mark previous month salaries as PAID
+        // 1️⃣ Mark previous month salaries as PENDING
         monthlySalaryRepository.findByMonth(previousMonth).forEach(ms -> {
-            if (ms.getStatus() != MonthlySalary.Status.PAID) {
-                ms.setStatus(MonthlySalary.Status.PAID);
+            if (ms.getStatus() == MonthlySalary.Status.RUNNING) {
+                ms.setStatus(MonthlySalary.Status.PENDING);
                 monthlySalaryRepository.save(ms);
-                log.info("✅ Marked salary as PAID for {} ({})",
+                log.info("🕓 Marked salary as PENDING for {} ({})",
                         ms.getEmployee().getName(), previousMonth);
             }
         });
 
         // 2️⃣ Process current month salaries
         List<Employee> employees = employeeRepository.findAll();
-        int totalDaysInMonth = currentMonth.lengthOfMonth(); // includes weekends & holidays
+        int totalDaysInMonth = currentMonth.lengthOfMonth();
 
         for (Employee emp : employees) {
 
@@ -351,21 +517,16 @@ public class UnifiedSalaryScheduler {
                     .findByEmployeeAndMonth(emp, currentMonth)
                     .orElseGet(() -> createNewMonthlySalary(emp, currentMonth, totalDaysInMonth));
 
-            // ✅ Count present days
+            // ✅ Attendance and Leave Data
             long presentDays = attendanceRepository.countByUserAndStatusAndMonth(
                     emp.getUser(), "PRESENT", currentMonth.getYear(), currentMonth.getMonthValue());
-
-            // ✅ Count only approved SICK leaves
             long sickLeaves = leaveRepository.countApprovedSickLeaves(
                     emp.getUser(), currentMonth.getYear(), currentMonth.getMonthValue());
 
-            // ✅ Count holidays (always paid)
-            int holidays = getHolidayCountInMonth(currentMonth);
+            // ✅ Combined count of weekends + holidays (no duplicates)
+            int paidOffDays = getUniquePaidOffDaysUpToToday(currentMonth);
 
-            // ✅ Count weekends (always paid)
-            int weekendDays = getWeekendCountInMonth(currentMonth);
-
-            // ✅ Get salary package
+            // ✅ Get Salary Package
             SalaryPackage sp = salaryPackageRepository.findByEmployee(emp)
                     .orElseThrow(() -> new RuntimeException(
                             "Salary package not found for " + emp.getName()));
@@ -373,13 +534,13 @@ public class UnifiedSalaryScheduler {
             // ✅ Handle LOP (Loss of Pay)
             long lopDays = sp.getLop() != 0 ? Math.round(sp.getLop()) : 0;
 
-            // ✅ Calculate payable days
-            long payableDays = Math.max(0, presentDays + sickLeaves + holidays + weekendDays - lopDays);
-            if (payableDays > totalDaysInMonth) payableDays = totalDaysInMonth; // prevent overflow
+            // ✅ Payable days = present + sick + (unique paid offs) - LOP
+            long payableDays = Math.max(0, presentDays + sickLeaves + paidOffDays - lopDays);
+            if (payableDays > totalDaysInMonth) payableDays = totalDaysInMonth;
 
             double factor = (double) payableDays / totalDaysInMonth;
 
-            // 💵 Calculate monthly salary (pro-rated)
+            // 💵 Salary calculation
             double basic = sp.getBasic() / 12 * factor;
             double flexible = sp.getFlexibleBenefitPlan() / 12 * factor;
             double special = sp.getSpecialAllowance() / 12 * factor;
@@ -388,7 +549,7 @@ public class UnifiedSalaryScheduler {
             double gross = basic + flexible + special + pf;
             double net = gross - tax;
 
-            // 💾 Update salary record
+            // 💾 Save salary
             ms.setBasic(basic);
             ms.setFlexibleBenefitPlan(flexible);
             ms.setSpecialAllowance(special);
@@ -406,28 +567,28 @@ public class UnifiedSalaryScheduler {
         log.info("✅ Salary recalculation completed for {}", currentMonth);
     }
 
-    /** 🗓️ Count number of weekends (Saturday + Sunday) in the month */
-    private int getWeekendCountInMonth(YearMonth ym) {
-        int count = 0;
-        for (int day = 1; day <= ym.lengthOfMonth(); day++) {
-            DayOfWeek dow = ym.atDay(day).getDayOfWeek();
-            if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
-                count++;
-            }
-        }
-        return count;
-    }
+    /** 🗓️ Count unique paid-off days (weekends + holidays), up to today if current month */
+    private int getUniquePaidOffDaysUpToToday(YearMonth ym) {
+        LocalDate today = LocalDate.now();
+        int daysToCount = ym.equals(YearMonth.from(today)) ? today.getDayOfMonth() : ym.lengthOfMonth();
 
-    /** 🗓️ Count number of holidays in the month */
-    private int getHolidayCountInMonth(YearMonth ym) {
-        int count = 0;
-        for (int d = 1; d <= ym.lengthOfMonth(); d++) {
-            LocalDate date = ym.atDay(d);
+        Set<LocalDate> paidOffDays = new HashSet<>();
+
+        for (int day = 1; day <= daysToCount; day++) {
+            LocalDate date = ym.atDay(day);
+            DayOfWeek dow = date.getDayOfWeek();
+
+            // Add weekends
+            if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+                paidOffDays.add(date);
+            }
+
+            // Add holidays (automatically ignores duplicates)
             if (holidayRepository.existsByDate(date)) {
-                count++;
+                paidOffDays.add(date);
             }
         }
-        return count;
+        return paidOffDays.size();
     }
 
     /** 🆕 Create new MonthlySalary record if missing */
@@ -450,4 +611,3 @@ public class UnifiedSalaryScheduler {
         );
     }
 }
-
