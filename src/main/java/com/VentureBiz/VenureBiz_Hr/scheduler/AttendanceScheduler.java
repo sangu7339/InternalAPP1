@@ -264,9 +264,9 @@ public class AttendanceScheduler {
                     attendanceRepository.save(att);
                 }
             }
-            System.out.println("✅ Auto checkout completed for " + today);
+            System.out.println(" Auto checkout completed for " + today);
         } catch (Exception e) {
-            System.err.println("❌ AutoCheckout failed: " + e.getMessage());
+            System.err.println(" AutoCheckout failed: " + e.getMessage());
         }
     }
 
@@ -288,9 +288,9 @@ public class AttendanceScheduler {
                     attendanceRepository.save(absent);
                 }
             }
-            System.out.println("✅ Absentee marking completed for " + today);
+            System.out.println(" Absentee marking completed for " + today);
         } catch (Exception e) {
-            System.err.println("❌ MarkAbsentees failed: " + e.getMessage());
+            System.err.println(" MarkAbsentees failed: " + e.getMessage());
         }
     }
 

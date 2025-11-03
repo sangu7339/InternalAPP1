@@ -502,7 +502,7 @@ public class UnifiedSalaryScheduler {
             if (ms.getStatus() == MonthlySalary.Status.RUNNING) {
                 ms.setStatus(MonthlySalary.Status.PENDING);
                 monthlySalaryRepository.save(ms);
-                log.info("🕓 Marked salary as PENDING for {} ({})",
+                log.info(" Marked salary as PENDING for {} ({})",
                         ms.getEmployee().getName(), previousMonth);
             }
         });
@@ -564,10 +564,10 @@ public class UnifiedSalaryScheduler {
             monthlySalaryRepository.save(ms);
         }
 
-        log.info("✅ Salary recalculation completed for {}", currentMonth);
+        log.info(" Salary recalculation completed for {}", currentMonth);
     }
 
-    /** 🗓️ Count unique paid-off days (weekends + holidays), up to today if current month */
+    /**  Count unique paid-off days (weekends + holidays), up to today if current month */
     private int getUniquePaidOffDaysUpToToday(YearMonth ym) {
         LocalDate today = LocalDate.now();
         int daysToCount = ym.equals(YearMonth.from(today)) ? today.getDayOfMonth() : ym.lengthOfMonth();
