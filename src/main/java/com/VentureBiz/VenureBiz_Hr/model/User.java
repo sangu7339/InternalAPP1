@@ -23,4 +23,13 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     private Role role;
+    
+    
+    private java.time.LocalDateTime passwordUpdatedAt;
+
+    // ✅ Optional helper method (not persisted)
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+        this.passwordUpdatedAt = java.time.LocalDateTime.now();
+    }
 }

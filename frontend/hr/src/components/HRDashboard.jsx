@@ -861,6 +861,227 @@
 
 // export default HRDashboard;
 
+// import React, { useState, useEffect, useRef } from "react";
+// import EmpManagement from "./EmpManagement";
+// import Attendance from "./Attendance";
+// import LeaveManagement from "./HRLeaveManagement";
+// import HRSalaryManagement from "./HRSalaryManagement";
+// import AnnouncementManagement from "./AnnouncementManagement";
+// import HolidayCalendar from "./HolidayCalendar";
+
+// function HRDashboard() {
+//   const [activeTab, setActiveTab] = useState("overview");
+//   const [pendingUsers, setPendingUsers] = useState([]);
+//   const [showNotifications, setShowNotifications] = useState(false);
+//   const userEmail = localStorage.getItem("email");
+
+//   // ✅ Change this if your backend runs on another port
+//   const API_BASE_URL = "http://localhost:8080";
+
+//   // Create a ref for the notification dropdown
+//   const notificationRef = useRef(null);
+
+//   // ✅ Fetch pending users (users-not-employees)
+//   const fetchPendingUsers = async () => {
+//     try {
+//       const token = localStorage.getItem("token"); // if using JWT
+
+//       const response = await fetch(`${API_BASE_URL}/api/hr/users-not-employees`, {
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: token ? `Bearer ${token}` : "",
+//         },
+//       });
+
+//       if (!response.ok) {
+//         console.error("❌ Backend returned an error:", response.status, response.statusText);
+//         setPendingUsers([]);
+//         return;
+//       }
+
+//       const data = await response.json();
+
+//       if (Array.isArray(data)) {
+//         setPendingUsers(data);
+//       } else if (data.message) {
+//         console.log("ℹ️ Backend message:", data.message);
+//         setPendingUsers([]);
+//       } else {
+//         setPendingUsers([]);
+//       }
+//     } catch (error) {
+//       console.error("⚠️ Fetch error: Could not connect to backend. Details:", error);
+//       setPendingUsers([]);
+//     }
+//   };
+
+//   useEffect(() => {
+//     fetchPendingUsers();
+//     const interval = setInterval(fetchPendingUsers, 30000); // auto-refresh every 30s
+//     return () => clearInterval(interval);
+//   }, []);
+
+//   // Click outside handler for notifications
+//   useEffect(() => {
+//     const handleClickOutside = (event) => {
+//       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+//         setShowNotifications(false);
+//       }
+//     };
+
+//     // Add event listener when notifications are shown
+//     if (showNotifications) {
+//       document.addEventListener("mousedown", handleClickOutside);
+//     }
+
+//     // Clean up event listener
+//     return () => {
+//       document.removeEventListener("mousedown", handleClickOutside);
+//     };
+//   }, [showNotifications]);
+
+//   const tabs = [
+//     { key: "employees", label: "Employee Management", icon: "👥" },
+//     { key: "attendance", label: "Attendance Tracking", icon: "⏰" },
+//     { key: "leaves", label: "Leave Management", icon: "📅" },
+//     { key: "salary", label: "Salary Management", icon: "💰" },
+//     { key: "announcements", label: "Announcements & Notices", icon: "🔔" },
+//     { key: "calendar", label: "Calendar & Events", icon: "📆" },
+//   ];
+
+//   const renderTab = () => {
+//     switch (activeTab) {
+//       case "employees":
+//         return <EmpManagement />;
+//       case "attendance":
+//         return <Attendance />;
+//       case "leaves":
+//         return <LeaveManagement />;
+//       case "salary":
+//         return <HRSalaryManagement />;
+//       case "announcements":
+//         return <AnnouncementManagement user={{ email: userEmail }} />;
+//       case "calendar":
+//         return <HolidayCalendar />;
+//       default:
+//         return (
+//           <div className="overview-content">
+//             <h2>Welcome, {userEmail || "HR Admin"} 👋</h2>
+//             <p>Select a module from the menu above to get started.</p>
+//           </div>
+//         );
+//     }
+//   };
+
+//   return (
+//     <>
+//       <style>{`
+//         * { box-sizing: border-box; font-family: "Segoe UI", Roboto, sans-serif; }
+//         html, body, #root { margin: 0; padding: 0; height: 100%; width: 100%; background-color: #2a4969ff; }
+//         .dashboard { display: flex; flex-direction: column; height: 100%; width: 100%; }
+//         .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; background-color: #fff; border-bottom: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(151, 33, 70, 0.05); position: relative; }
+//         .header-left h1 { font-size: 22px; margin: 0; font-weight: 600; color: #190207d2; }
+//         .header-actions { display: flex; align-items: center; gap: 12px; position: relative; }
+//         .action-btn { display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 14px; cursor: pointer; transition: all 0.2s ease; font-size: 14px; }
+//         .action-btn:hover { background: #f9fafb; }
+//         .logout-btn { background-color: #ef4444; color: white; border: none; }
+//         .logout-btn:hover { background-color: #dc2626; }
+//         .notification-bell { position: relative; font-size: 20px; cursor: pointer; }
+//         .notification-bell.red { color: red; }
+//         .notification-count { position: absolute; top: -6px; right: -6px; background: red; color: white; border-radius: 50%; font-size: 12px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
+//         .notification-dropdown { position: absolute; top: 40px; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 300px; max-height: 300px; overflow-y: auto; z-index: 100; }
+//         .notification-item { padding: 10px 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+//         .notification-item:hover { background: #f9fafb; }
+//         .tab-bar { display: flex; justify-content: space-evenly; align-items: center; padding: 0 32px; background: #fff; border-bottom: 1px solid #e5e7eb; overflow-x: auto; }
+//         .tab-item { display: flex; align-items: center; gap: 8px; padding: 16px 0; font-size: 15px; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s ease; }
+//         .tab-item:hover { color: #111827; }
+//         .tab-item.active { color: #111827; font-weight: 600; border-bottom: 2px solid #111827; }
+//         .content { flex: 1; background-color: #f9fafb; padding: 24px 32px; overflow-y: auto; min-height: 0; }
+//         .overview-content { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center; color: #374151; }
+//         .overview-content h2 { font-size: 26px; margin-bottom: 10px; }
+//       `}</style>
+
+//       <div className="dashboard">
+//         {/* Header */}
+//         <header className="header">
+//           <div className="header-left">
+//             <h1>Core HR Dashboard</h1>
+//           </div>
+
+//           <div className="header-actions">
+//             {/* 🔔 Notification Bell with ref */}
+//             <div 
+//               ref={notificationRef}
+//               style={{ position: 'relative' }}
+//             >
+//               {/* <div
+//                 className={`notification-bell ${pendingUsers.length > 0 ? "red" : ""}`}
+//                 onClick={() => setShowNotifications(!showNotifications)}
+//               >
+//                 🔔
+//                 {pendingUsers.length > 0 && (
+//                   <span className="notification-count">{pendingUsers.length}</span>
+//                 )}
+//               </div> */}
+
+//               {showNotifications && (
+//                 <div className="notification-dropdown">
+//                   {pendingUsers.length === 0 ? (
+//                     <div className="notification-item">No pending users 🎉</div>
+//                   ) : (
+//                     pendingUsers.map((user) => (
+//                       <div key={user.id} className="notification-item">
+//                         <strong>{user.email}</strong> — {user.role}
+//                       </div>
+//                     ))
+//                   )}
+//                 </div>
+//               )}
+//             </div>
+
+//             <button className="action-btn" onClick={() => setActiveTab("calendar")}>
+//               📆 Calendar & Events
+//             </button>
+
+//             <button className="action-btn">👤 {userEmail || "HR Admin"}</button>
+
+//             <button
+//               className="action-btn logout-btn"
+//               onClick={() => {
+//                 if (window.confirm("Are you sure you want to logout?")) {
+//                   localStorage.clear();
+//                   window.location.reload();
+//                 }
+//               }}
+//             >
+//               Logout
+//             </button>
+//           </div>
+//         </header>
+
+//         {/* Tabs */}
+//         <nav className="tab-bar">
+//           {tabs.map((tab) => (
+//             <div
+//               key={tab.key}
+//               className={`tab-item ${activeTab === tab.key ? "active" : ""}`}
+//               onClick={() => setActiveTab(tab.key)}
+//             >
+//               <span>{tab.icon}</span>
+//               <span>{tab.label}</span>
+//             </div>
+//           ))}
+//         </nav>
+
+//         {/* Main Content */}
+//         <main className="content">{renderTab()}</main>
+//       </div>
+//     </>
+//   );
+// }
+
+// export default HRDashboard;
+
 import React, { useState, useEffect, useRef } from "react";
 import EmpManagement from "./EmpManagement";
 import Attendance from "./Attendance";
@@ -873,13 +1094,21 @@ function HRDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [pendingUsers, setPendingUsers] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const userEmail = localStorage.getItem("email");
 
   // ✅ Change this if your backend runs on another port
   const API_BASE_URL = "http://localhost:8080";
 
-  // Create a ref for the notification dropdown
+  // Create refs for dropdowns
   const notificationRef = useRef(null);
+  const profileRef = useRef(null);
 
   // ✅ Fetch pending users (users-not-employees)
   const fetchPendingUsers = async () => {
@@ -915,6 +1144,58 @@ function HRDashboard() {
     }
   };
 
+  // ✅ Handle password change
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordError("");
+    setIsUpdatingPassword(true);
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError("New passwords do not match.");
+      setIsUpdatingPassword(false);
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters long.");
+      setIsUpdatingPassword(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token"); // if using JWT
+
+      const response = await fetch(`${API_BASE_URL}/api/hr/update-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update password");
+      }
+
+      const data = await response.json();
+      alert(data.message || "Password updated successfully!"); // Or use a toast notification
+      setShowPasswordModal(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    } catch (error) {
+      setPasswordError(error.message || "An error occurred while updating the password.");
+      console.error("Password update error:", error);
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   useEffect(() => {
     fetchPendingUsers();
     const interval = setInterval(fetchPendingUsers, 30000); // auto-refresh every 30s
@@ -927,18 +1208,16 @@ function HRDashboard() {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);
       }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileDropdown(false);
+      }
     };
 
-    // Add event listener when notifications are shown
-    if (showNotifications) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    // Clean up event listener
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showNotifications]);
+  }, []);
 
   const tabs = [
     { key: "employees", label: "Employee Management", icon: "👥" },
@@ -984,14 +1263,16 @@ function HRDashboard() {
         .header-actions { display: flex; align-items: center; gap: 12px; position: relative; }
         .action-btn { display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 14px; cursor: pointer; transition: all 0.2s ease; font-size: 14px; }
         .action-btn:hover { background: #f9fafb; }
+        .profile-btn { position: relative; }
         .logout-btn { background-color: #ef4444; color: white; border: none; }
         .logout-btn:hover { background-color: #dc2626; }
         .notification-bell { position: relative; font-size: 20px; cursor: pointer; }
         .notification-bell.red { color: red; }
         .notification-count { position: absolute; top: -6px; right: -6px; background: red; color: white; border-radius: 50%; font-size: 12px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
-        .notification-dropdown { position: absolute; top: 40px; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 300px; max-height: 300px; overflow-y: auto; z-index: 100; }
-        .notification-item { padding: 10px 12px; border-bottom: 1px solid #eee; cursor: pointer; }
-        .notification-item:hover { background: #f9fafb; }
+        .dropdown { position: absolute; top: 40px; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 200px; z-index: 100; }
+        .dropdown-item { padding: 10px 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .dropdown-item:hover { background: #f9fafb; }
+        .dropdown-item:last-child { border-bottom: none; }
         .tab-bar { display: flex; justify-content: space-evenly; align-items: center; padding: 0 32px; background: #fff; border-bottom: 1px solid #e5e7eb; overflow-x: auto; }
         .tab-item { display: flex; align-items: center; gap: 8px; padding: 16px 0; font-size: 15px; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s ease; }
         .tab-item:hover { color: #111827; }
@@ -999,6 +1280,22 @@ function HRDashboard() {
         .content { flex: 1; background-color: #f9fafb; padding: 24px 32px; overflow-y: auto; min-height: 0; }
         .overview-content { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center; color: #374151; }
         .overview-content h2 { font-size: 26px; margin-bottom: 10px; }
+        /* Password Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background: white; padding: 32px; border-radius: 8px; width: 100%; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        .modal h3 { margin: 0 0 20px 0; color: #111827; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 4px; font-weight: 500; color: #374151; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; }
+        .form-group input:focus { outline: none; border-color: #3b82f6; }
+        .error { color: #ef4444; font-size: 12px; margin-top: 4px; }
+        .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-secondary { background: #f3f4f6; color: #374151; }
+        .btn-secondary:hover { background: #e5e7eb; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
       `}</style>
 
       <div className="dashboard">
@@ -1043,7 +1340,32 @@ function HRDashboard() {
               📆 Calendar & Events
             </button>
 
-            <button className="action-btn">👤 {userEmail || "HR Admin"}</button>
+            {/* 👤 Profile Dropdown */}
+            <div 
+              ref={profileRef}
+              className="profile-btn"
+            >
+              <button 
+                className="action-btn" 
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+              >
+                👤 {userEmail || "HR Admin"}
+              </button>
+              {showProfileDropdown && (
+                <div className="dropdown">
+                  <div 
+                    className="dropdown-item" 
+                    onClick={() => {
+                      setShowProfileDropdown(false);
+                      setShowPasswordModal(true);
+                    }}
+                  >
+                    🔒 Change Password
+                  </div>
+                  {/* Add more profile options here if needed */}
+                </div>
+              )}
+            </div>
 
             <button
               className="action-btn logout-btn"
@@ -1076,6 +1398,65 @@ function HRDashboard() {
         {/* Main Content */}
         <main className="content">{renderTab()}</main>
       </div>
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Change Password</h3>
+            <form onSubmit={handlePasswordChange}>
+              <div className="form-group">
+                <label htmlFor="currentPassword">Current Password</label>
+                <input
+                  type="password"
+                  id="currentPassword"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="newPassword">New Password</label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="confirmNewPassword">Confirm New Password</label>
+                <input
+                  type="password"
+                  id="confirmNewPassword"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  required
+                />
+                {passwordError && <div className="error">{passwordError}</div>}
+              </div>
+              <div className="modal-buttons">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowPasswordModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={isUpdatingPassword}
+                >
+                  {isUpdatingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

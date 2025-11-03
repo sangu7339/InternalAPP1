@@ -138,6 +138,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -393,6 +394,43 @@ public class HrController {
                     .orElseThrow(() -> new RuntimeException("User not found with email: " + userInput.getEmail()));
         } else {
             throw new RuntimeException("User id or email must be provided");
+        }
+    }
+    @PreAuthorize("hasAnyRole('HR','EMPLOYEE')")
+    @PostMapping("/update-password")
+    public ResponseEntity<Map<String, String>> updatePassword(@RequestBody Map<String, String> request, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            String currentPassword = request.get("currentPassword");
+            String newPassword = request.get("newPassword");
+
+            if (currentPassword == null || newPassword == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Both currentPassword and newPassword are required"));
+            }
+
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+                return ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Current password is incorrect"));
+            }
+
+            user.setPassword(passwordEncoder.encode(newPassword));
+            user.setPasswordUpdatedAt(LocalDateTime.now());
+            userRepository.save(user);
+
+            return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Password update failed: " + e.getMessage()));
         }
     }
 }
