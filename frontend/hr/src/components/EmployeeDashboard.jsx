@@ -1477,32 +1477,47 @@
 //   );
 // }
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import EmployeeAttendance from "./EmployeeAttendance";
 import EmployeeLeave from "./EmployeeLeave";
 import EmployeeAnnouncement from "./EmployeeAnnouncement";
 import EmployeeSalary from "./Employeesalary";
 import Profile from "./Profile";
-import EmployeeCalendar from "./EmployeeCalendar"; // ✅ Added Calendar Component
+import EmployeeCalendar from "./EmployeeCalendar";
 
 export default function EmployeeDashboard({ user }) {
-  const [activeTab, setActiveTab] = useState(""); // Default tab (overview)
+  const [activeTab, setActiveTab] = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unseenCount, setUnseenCount] = useState(0);
 
-  // ✅ Added Calendar & Events tab
   const TABS = [
     { key: "profile", label: "Profile", icon: "👤" },
     { key: "attendance", label: "Attendance Tracking", icon: "⏰" },
     { key: "leave", label: "Leave Management", icon: "📅" },
     { key: "salary", label: "Salary Management", icon: "💰" },
     { key: "announcement", label: "Announcements & Notices", icon: "🔔" },
-    { key: "calendar", label: "Calendar & Events", icon: "📆" }, // ✅ New Tab Added
+    { key: "calendar", label: "Calendar & Events", icon: "📆" },
   ];
 
   useEffect(() => {
-    if (user && user.email) {
-      setUserEmail(user.email);
-    }
+    if (user?.email) setUserEmail(user.email);
+  }, [user]);
+
+  useEffect(() => {
+    const fetchUnseenCount = async () => {
+      const token = localStorage.getItem("token");
+      if (!token || !user?.email) return;
+      try {
+        const res = await axios.get(
+          `http://localhost:8080/api/announcements/unseen-count?email=${user.email}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setUnseenCount(res.data);
+      } catch (err) {
+        console.error("Failed to fetch unseen announcements", err);
+      }
+    };
+    fetchUnseenCount();
   }, [user]);
 
   const handleLogout = () => {
@@ -1510,14 +1525,24 @@ export default function EmployeeDashboard({ user }) {
     window.location.href = "/login";
   };
 
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-
-  const handleTabClick = (tabKey) => {
+  const handleTabClick = async (tabKey) => {
     setActiveTab(tabKey);
-    setIsMenuOpen(false);
+    if (tabKey === "announcement") {
+      setUnseenCount(0);
+      const token = localStorage.getItem("token");
+      if (!token || !user?.email) return;
+      try {
+        await axios.post(
+          `http://localhost:8080/api/announcements/mark-seen?email=${user.email}`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (err) {
+        console.error("Failed to mark announcements as seen", err);
+      }
+    }
   };
 
-  // ✅ Added case for calendar
   const renderTabContent = () => {
     switch (activeTab) {
       case "profile":
@@ -1537,8 +1562,8 @@ export default function EmployeeDashboard({ user }) {
           <div className="overview-tab">
             <h2>Welcome, {userEmail}</h2>
             <p>
-              Use the menu or tabs above to manage your profile, attendance,
-              leaves, salary, announcements, and calendar.
+              Use the tabs to manage your profile, attendance, leaves, salary,
+              announcements, and events.
             </p>
           </div>
         );
@@ -1554,15 +1579,9 @@ export default function EmployeeDashboard({ user }) {
   }
 
   return (
-    <div className="dashboard-container">
-      {/* Header */}
+    <div className="dashboard-wrapper">
       <header className="dashboard-header">
-        <div className="header-left">
-          <button className="hamburger-menu" onClick={toggleMenu}>
-            ☰
-          </button>
-          <h1>Employee Dashboard</h1>
-        </div>
+        <h1>Employee Dashboard</h1>
         <div className="header-buttons">
           <button className="email-button">{userEmail || "Employee"}</button>
           <button className="logout-button" onClick={handleLogout}>
@@ -1571,31 +1590,6 @@ export default function EmployeeDashboard({ user }) {
         </div>
       </header>
 
-      {/* Sidebar Menu (Mobile) */}
-      <div className={`sidebar-menu ${isMenuOpen ? "open" : ""}`}>
-        <div className="sidebar-header">
-          <h2>Menu</h2>
-          <button className="close-menu" onClick={toggleMenu}>
-            ✕
-          </button>
-        </div>
-        <div className="sidebar-content">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => handleTabClick(tab.key)}
-              className={activeTab === tab.key ? "active-tab" : ""}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
-          <button onClick={handleLogout} className="sidebar-logout-button">
-            🚪 Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Tabs (Desktop) */}
       <nav className="dashboard-tabs">
         {TABS.map((tab) => (
           <button
@@ -1604,203 +1598,151 @@ export default function EmployeeDashboard({ user }) {
             className={activeTab === tab.key ? "active-tab" : ""}
           >
             {tab.icon} {tab.label}
+            {tab.key === "announcement" && unseenCount > 0 && (
+              <span className="notification-badge">{unseenCount}</span>
+            )}
           </button>
         ))}
       </nav>
 
-      {/* Main Content */}
-      <main>{renderTabContent()}</main>
+      <main className="dashboard-main">{renderTabContent()}</main>
 
-      {/* Styles */}
-      <style>
-        {`
-          html, body, #root {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-          }
+      <style>{`
+        * {
+          box-sizing: border-box;
+        }
 
-          .dashboard-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            background: #f9fafb;
-          }
+        body {
+          margin: 0;
+          font-family: "Inter", sans-serif;
+          background: #f9fafb;
+          overflow: hidden;
+        }
 
-          .dashboard-header {
-            flex-shrink: 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 24px;
-            background: #111827;
-            color: white;
-            position: sticky;
-            top: 0;
-            z-index: 20;
-          }
+        .dashboard-wrapper {
+          display: flex;
+          flex-direction: column;
+          width: 100vw;
+          height: 100vh;
+          overflow: hidden;
+        }
 
-          .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-          }
+        /* Header */
+        .dashboard-header {
+          background: #111827;
+          color: white;
+          padding: 10px 24px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+          flex-shrink: 0;
+        }
 
-          .hamburger-menu {
-            display: none;
-            font-size: 1.5rem;
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 8px;
-          }
+        .dashboard-header h1 {
+          font-size: 1.4rem;
+          font-weight: 600;
+          margin: 0;
+          flex-shrink: 0;
+        }
 
+        .header-buttons {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-shrink: 0;
+        }
+
+        .email-button {
+          background: #374151;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          padding: 6px 14px;
+          font-size: 0.9rem;
+        }
+
+        .logout-button {
+          background: #dc2626;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          padding: 6px 14px;
+          font-size: 0.9rem;
+          cursor: pointer;
+        }
+
+        /* Tabs */
+        .dashboard-tabs {
+          display: flex;
+          justify-content: center;
+          flex-wrap: wrap;
+          background: white;
+          border-bottom: 1px solid #e5e7eb;
+          padding: 6px 0;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          flex-shrink: 0;
+          width: 100%;
+        }
+
+        .dashboard-tabs button {
+          position: relative;
+          background: none;
+          border: none;
+          font-size: 1rem;
+          font-weight: 500;
+          cursor: pointer;
+          padding: 8px 16px;
+        }
+
+        .dashboard-tabs button.active-tab {
+          border-bottom: 3px solid #1e3a8a;
+          font-weight: 600;
+        }
+
+        .notification-badge {
+          position: absolute;
+          top: -2px;
+          right: 8px;
+          background: #dc2626;
+          color: white;
+          border-radius: 50%;
+          padding: 2px 6px;
+          font-size: 0.7rem;
+          font-weight: bold;
+          line-height: 1;
+        }
+
+        /* Main content */
+        .dashboard-main {
+          flex: 1;
+          overflow-y: auto;
+          padding: 16px 24px;
+          height: calc(100vh - 130px);
+          width: 100%;
+        }
+
+        .overview-tab h2 {
+          color: #111827;
+          margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
           .dashboard-header h1 {
-            font-size: 1.75rem;
-            font-weight: bold;
+            font-size: 1.1rem;
           }
-
-          .header-buttons button {
-            margin-left: 12px;
-            padding: 8px 16px;
-            border-radius: 12px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-          }
-
-          .email-button {
-            background: #374151;
-            color: white;
-          }
-          .email-button:hover {
-            background: #4b5563;
-          }
-
-          .logout-button {
-            background: #dc2626;
-            color: white;
-          }
-          .logout-button:hover {
-            background: #b91c1c;
-          }
-
-          .sidebar-menu {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #ffffff;
-            z-index: 30;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-          }
-
-          .sidebar-menu.open {
-            transform: translateX(0);
-          }
-
-          .sidebar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 24px;
-            background: #2a4969;
-            color: white;
-          }
-
-          .sidebar-content {
-            display: flex;
-            flex-direction: column;
-            padding: 16px;
-          }
-
-          .sidebar-content button {
-            padding: 12px 16px;
-            border: none;
-            background: transparent;
-            text-align: left;
-            font-size: 1rem;
-            font-weight: 500;
-            color: #374151;
-            border-bottom: 1px solid #e5e7eb;
-            cursor: pointer;
-          }
-
-          .sidebar-content button.active-tab {
-            background: #2a4969;
-            color: white;
-            font-weight: 600;
-          }
-
-          .sidebar-logout-button {
-            color: #dc2626;
-            font-weight: 600;
-          }
-
-          .dashboard-tabs {
-            flex-shrink: 0;
-            display: flex;
-            background: white;
-            border-bottom: 1px solid #e5e7eb;
-            overflow-x: auto;
-            position: sticky;
-            top: 64px;
-            z-index: 10;
-          }
-
           .dashboard-tabs button {
-            padding: 10px 20px;
-            cursor: pointer;
-            border: none;
-            background: transparent;
-            font-weight: 500;
-            white-space: nowrap;
+            font-size: 0.85rem;
           }
-
-          .dashboard-tabs button.active-tab {
-            border-bottom: 3px solid #2a4969;
-            color: #2a4969;
-            font-weight: 600;
+          .email-button, .logout-button {
+            font-size: 0.8rem;
+            padding: 5px 10px;
           }
-
-          main {
-            flex: 1;
-            overflow-y: scroll;
-            padding: 24px;
-          }
-
-          .overview-tab {
-            text-align: center;
-            padding: 24px;
-          }
-
-          .overview-tab h2 {
-            font-size: 2rem;
-            margin-bottom: 12px;
-            color: #1f2937;
-          }
-
-          .login-warning {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: #b91c1c;
-            font-weight: 600;
-          }
-
-          @media (max-width: 640px) {
-            .hamburger-menu { display: block; }
-            .dashboard-tabs { display: none; }
-            .sidebar-menu { display: block; }
-          }
-        `}
-      </style>
+        }
+      `}</style>
     </div>
   );
 }
+
